@@ -1,0 +1,45 @@
+name: Build Orbit Assistant for macOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "**/*.swift"
+      - "**/*.plist"
+      - "**/*.pbxproj"
+      - ".github/workflows/build-macos.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build unsigned macOS app (Catalina minimum)
+        run: >-
+          xcodebuild
+          -project OrbitAssistant.xcodeproj
+          -scheme OrbitAssistant
+          -configuration Release
+          -destination "platform=macOS"
+          -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+      - name: Package app
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent             build/Build/Products/Release/OrbitAssistant.app             dist/OrbitAssistant-macOS.zip
+
+      - name: Upload downloadable app
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrbitAssistant-macOS
+          path: dist/OrbitAssistant-macOS.zip
+          if-no-files-found: error
+          retention-days: 30
